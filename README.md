@@ -1,7 +1,11 @@
-# a2a-auction-protocol
+# A2A Auction Protocol
 
-Reusable Pydantic models and helpers for the `marketplace.auction/v1` business protocol carried
-inside A2A JSON-RPC messages.
+An extensible auction business protocol for AI Agents communicating over A2A.
+
+It defines interoperable auction commands, AuctionCards, mechanism descriptions, offers, outcomes,
+and settlement results for the `marketplace.auction/v1` protocol. This repository provides reusable
+Pydantic models, validation helpers, JSON Schema, and runnable examples as a Python reference
+implementation.
 
 ![A2A auction protocol overview](assets/a2a-auction-protocol-overview.png)
 
