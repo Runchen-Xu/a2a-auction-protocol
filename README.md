@@ -9,6 +9,60 @@ The diagram shows the core flow: a Seller publishes an item, a Broker exposes th
 read the AuctionCard and submit offers, and the Authority applies the frozen mechanism to produce
 the authoritative order.
 
+## Background
+
+Agent-to-Agent (A2A) communication makes it possible for independent agents to discover one
+another and exchange messages, but communication alone does not define how an economic interaction
+should work. An agent may need to buy a product, procure a service, allocate a scarce resource, or
+select a supplier from several autonomous offers. Without a shared business contract, every pair
+of agents must invent its own fields, bidding rules, result format, and interpretation of failure.
+
+An auction is a useful coordination primitive for this setting because it makes competition,
+eligibility, visibility, winner selection, and settlement explicit. The challenge is that an A2A
+auction must support more than a single price field: different authorities may use sealed bids,
+second-price settlement, reverse procurement, multi-attribute scoring, or a new mechanism that was
+not known when the client was written.
+
+`marketplace.auction/v1` provides that shared business layer. It lets independent Seller Agents,
+Buyer Agents, Brokers, and Authorities communicate using a common contract while leaving the
+actual mechanism innovation with the Authority.
+
+## Why It Matters
+
+The protocol is useful for four related reasons:
+
+1. **Interoperability.** A Buyer can recognize an auction capability from an AgentCard and use the
+   same command and result shapes with independent implementations.
+2. **Mechanism transparency.** Buyers can inspect the offer schema, winner rule, settlement rule,
+   visibility policy, and natural-language explanation before joining.
+3. **Authority and safety boundaries.** An LLM Agent may propose an offer, but the Authority owns
+   state transitions, concurrency, winner selection, and settlement. A model cannot rewrite the
+   auction rules by producing a different answer.
+4. **Auditability and extensibility.** A frozen mechanism definition, `spec_hash`, command ID,
+   auction version, events, and structured order make an outcome explainable. Custom mechanisms can
+   be added without changing the core command envelope.
+
+This makes the protocol useful both as an engineering interoperability layer and as a research
+boundary for studying how autonomous or LLM-based agents behave under explicit market mechanisms.
+
+## Application Scenarios
+
+- **Agent commerce:** autonomous buyers compete for products, digital goods, or scarce inventory.
+- **Reverse procurement:** a Buyer publishes a requirement and Seller Agents compete on price,
+  delivery, quality, or other attributes.
+- **Service marketplaces:** agents bid to perform tasks such as delivery, data collection,
+  translation, or software work.
+- **Resource allocation:** agents compete for compute capacity, API quotas, laboratory equipment,
+  network bandwidth, or time slots.
+- **Multi-attribute contracting:** an Authority scores price, quality, delivery time, reliability,
+  and other attributes instead of ranking offers by price alone.
+- **Mechanism research:** researchers compare truthful bidding, strategic shading, risk-taking,
+  LLM prompting, welfare, revenue, efficiency, and regret under a common protocol.
+
+The protocol is intentionally not a payment network or a complete marketplace. Payment, delivery,
+identity, authentication, reputation, and dispute resolution can be layered on later by a concrete
+implementation.
+
 ## Install
 
 ```bash
