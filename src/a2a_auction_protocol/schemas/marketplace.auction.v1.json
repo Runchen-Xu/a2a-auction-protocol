@@ -1,0 +1,100 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:a2a:marketplace.auction:v1",
+  "title": "marketplace.auction/v1 wire messages",
+  "oneOf": [
+    { "$ref": "#/$defs/command" },
+    { "$ref": "#/$defs/result" }
+  ],
+  "$defs": {
+    "command": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["protocol", "command_id", "action", "actor_id", "payload"],
+      "properties": {
+        "protocol": { "const": "marketplace.auction/v1" },
+        "command_id": { "type": "string", "format": "uuid" },
+        "action": { "type": "string", "minLength": 1, "maxLength": 80 },
+        "actor_id": { "type": "string", "minLength": 1, "maxLength": 80 },
+        "payload": { "type": "object" }
+      }
+    },
+    "error": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["code", "message", "category", "retryable", "fields", "details"],
+      "properties": {
+        "code": { "type": "string", "minLength": 1 },
+        "message": { "type": "string", "minLength": 1 },
+        "category": {
+          "enum": ["validation", "authorization", "conflict", "lifecycle", "mechanism", "dependency", "internal"]
+        },
+        "retryable": { "type": "boolean" },
+        "fields": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["path", "message"],
+            "properties": { "path": { "type": "string" }, "message": { "type": "string" } }
+          }
+        },
+        "details": { "type": "object" }
+      }
+    },
+    "a2a": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "properties": {
+        "message_id": { "type": ["string", "null"] },
+        "context_id": { "type": ["string", "null"] },
+        "task_id": { "type": ["string", "null"] }
+      }
+    },
+    "visibilityMode": {
+      "enum": ["public", "participants", "seller", "authority", "sealed_until_close"]
+    },
+    "mechanismDefinition": {
+      "type": "object",
+      "required": ["id", "version", "title", "offer_schema", "settlement", "spec_hash"],
+      "properties": {
+        "id": { "type": "string" },
+        "version": { "type": "string" },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "human_spec": { "type": "string" },
+        "offer_schema": { "type": "object" },
+        "rules": { "type": "object" },
+        "settlement": { "type": "object" },
+        "formal_spec": { "type": "object" },
+        "implementation": { "type": "object" },
+        "field_visibility": {
+          "type": "object",
+          "additionalProperties": { "$ref": "#/$defs/visibilityMode" }
+        },
+        "directions": {
+          "type": "array",
+          "items": { "enum": ["forward", "reverse"] }
+        },
+        "spec_hash": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" }
+      }
+    },
+    "result": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["protocol", "command_id", "status", "data", "error", "a2a"],
+      "properties": {
+        "protocol": { "const": "marketplace.auction/v1" },
+        "command_id": { "type": "string", "format": "uuid" },
+        "status": { "enum": ["accepted", "rejected"] },
+        "data": { "type": "object" },
+        "error": {
+          "oneOf": [
+            { "$ref": "#/$defs/error" },
+            { "type": "null" }
+          ]
+        },
+        "a2a": { "$ref": "#/$defs/a2a" }
+      }
+    }
+  }
+}
