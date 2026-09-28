@@ -3,6 +3,12 @@
 Reusable Pydantic models and helpers for the `marketplace.auction/v1` business protocol carried
 inside A2A JSON-RPC messages.
 
+![A2A auction protocol overview](assets/a2a-auction-protocol-overview.png)
+
+The diagram shows the core flow: a Seller publishes an item, a Broker exposes the auction, Buyers
+read the AuctionCard and submit offers, and the Authority applies the frozen mechanism to produce
+the authoritative order.
+
 ## Install
 
 ```bash
