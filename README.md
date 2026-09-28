@@ -45,6 +45,37 @@ The protocol is useful for four related reasons:
 This makes the protocol useful both as an engineering interoperability layer and as a research
 boundary for studying how autonomous or LLM-based agents behave under explicit market mechanisms.
 
+## Contributions
+
+This project makes five focused contributions on top of A2A:
+
+1. **A reusable auction business protocol.** It defines a stable `marketplace.auction/v1`
+   envelope for commands, results, AuctionCards, offers, mechanism descriptions, and orders. A2A
+   supplies the agent-to-agent transport; this project supplies the auction semantics that A2A
+   intentionally leaves to applications.
+2. **Mechanism-neutral extensibility.** The protocol is not tied to one auction format. It can
+   describe English, first-price, Vickrey, Dutch, reverse, multi-attribute, and Authority-defined
+   mechanisms through an open mechanism identifier, offer schema, visibility policy, winner rule,
+   settlement rule, and tie-breaker.
+3. **Explicit rule understanding and freezing.** Buyers and Sellers can inspect a machine-readable
+   `formal_spec`, a human-readable `human_spec`, and an executable implementation identity before
+   joining. The selected definition is frozen by `spec_hash`, so a mechanism cannot silently change
+   after an auction begins.
+4. **A clear authority and audit boundary.** The Authority is the source of valid state versions,
+   offer validation, winner selection, and settlement results. Command IDs, optimistic versions,
+   structured outcomes, and A2A correlation identifiers make duplicate requests and auction results
+   easier to audit. LLM Agents may reason or propose offers, but they do not override these rules.
+5. **A common basis for AI-agent auction research.** Because different agents can use the same
+   wire contract and the same frozen mechanism, researchers can compare prompts, models, valuation
+   information, budgets, bidding strategies, efficiency, welfare, revenue, and regret without
+   changing the communication layer for every experiment. The protocol is therefore a research
+   enabler, not a claim that this repository itself proves that LLM Agents are economically rational.
+
+The project deliberately does **not** claim to be a new version of the A2A standard. It is an
+application-level protocol that uses A2A as its transport and message envelope. It also does not
+provide a universal payment, identity, reputation, delivery, or dispute-resolution standard;
+those concerns remain concrete implementation or domain choices.
+
 ## Application Scenarios
 
 - **Agent commerce:** autonomous buyers compete for products, digital goods, or scarce inventory.
