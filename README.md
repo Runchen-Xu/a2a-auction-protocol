@@ -312,6 +312,89 @@ The resulting order is:
 The order is pending settlement because this protocol does not implement payment, delivery, or
 refunds.
 
+## Custom and Natural-Language Mechanisms
+
+The protocol is not limited to the built-in English, first-price, or Vickrey examples. Mechanism
+IDs are open strings, so an Authority can publish a more complex mechanism without changing the
+`marketplace.auction/v1` command envelope or requiring a new version of this package.
+
+For example, an Authority can define a multi-attribute procurement mechanism:
+
+```json
+{
+  "id": "acme.score_auction",
+  "version": "1",
+  "title": "Price, delivery, and quality score auction",
+  "description": "The lowest verified score wins.",
+  "human_spec": "Each supplier submits a price, delivery time, and quality score. The Authority computes score = price + delivery_days * 500 - quality_score * 100. The lowest score wins. Ties go to the earliest valid offer.",
+  "offer_schema": {
+    "type": "object",
+    "properties": {
+      "price": {"type": "integer", "minimum": 1},
+      "delivery_days": {"type": "integer", "minimum": 1},
+      "quality_score": {"type": "integer", "minimum": 0, "maximum": 100}
+    },
+    "required": ["price", "delivery_days", "quality_score"],
+    "additionalProperties": false
+  },
+  "rules": {
+    "winner": "lowest_score",
+    "score_formula": "price + delivery_days * 500 - quality_score * 100",
+    "tie_breaker": "earliest_valid_offer"
+  },
+  "settlement": {
+    "winner_rule": "lowest_score",
+    "price_rule": "winner_offer.price",
+    "offer_visibility": "sealed_until_close",
+    "tie_breaker": "earliest_valid_offer"
+  },
+  "formal_spec": {
+    "score_field": "score",
+    "score_direction": "minimize",
+    "score_inputs": ["price", "delivery_days", "quality_score"]
+  },
+  "implementation": {
+    "type": "authority_plugin",
+    "id": "acme.score_auction",
+    "version": "1"
+  },
+  "field_visibility": {
+    "price": "sealed_until_close",
+    "delivery_days": "sealed_until_close",
+    "quality_score": "seller",
+    "score": "public"
+  },
+  "directions": ["reverse"],
+  "spec_hash": "sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+}
+```
+
+This mechanism is more expressive than a single `amount` field: it can represent multi-attribute,
+reverse, score-based, or Authority-specific auctions. A Buyer can discover it through
+`list_mechanisms` and `get_mechanism`, inspect the offer schema and rules, then echo its
+`spec_hash` in `join_auction`.
+
+Natural-language mechanisms are supported through `human_spec`. This is useful when rules are
+complex and need to be explained to a human or an LLM Agent. However, the protocol makes an
+important distinction:
+
+```text
+human_spec       -> readable explanation
+formal_spec      -> machine-readable semantics
+implementation   -> Authority-owned executable rule
+```
+
+Natural language alone is not the final arbiter of a winner or price. If an Authority publishes
+only `human_spec`, a Buyer may understand the proposal but cannot independently execute or verify
+the result. For interoperable and auditable execution, the Authority should provide an
+`offer_schema`, `formal_spec`, deterministic `implementation` identity, and a frozen `spec_hash`.
+The Authority remains responsible for validating offers, computing outcomes, and returning a
+result that corresponds to the frozen definition.
+
+This also allows LLM Agents to reason about a custom mechanism without allowing the LLM to change
+the hard constraints. The LLM may propose an offer or explain a decision; the Authority plugin
+still enforces the mechanism and produces the authoritative settlement.
+
 ### Python Message Construction
 
 The same commands can be built and validated without importing any Marketplace implementation:
