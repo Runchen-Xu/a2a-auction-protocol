@@ -97,6 +97,23 @@ for the auction.
 This repository is intentionally not a marketplace server. It does not include a database, HTTP
 service, payment system, or winner-selection engine.
 
+## Runnable Examples
+
+The repository includes complete, transport-neutral transcripts rather than only isolated model
+snippets:
+
+```bash
+uv run python examples/complete_vickrey/run.py
+uv run python examples/custom_multi_attribute/run.py
+uv run python examples/reverse_procurement/run.py
+```
+
+The `complete_vickrey` example covers Seller creation, AuctionCard publication, mechanism
+acceptance, sealed offers, second-price settlement, and order creation. The custom and reverse
+examples show how the same envelope supports Authority-owned scoring and Buyer-led procurement.
+Raw JSON DataPart examples for non-Python clients are in [`examples/raw_a2a`](examples/raw_a2a),
+with a directory guide in [`examples/README.md`](examples/README.md).
+
 ## End-to-End Example
 
 The following example shows a forward Vickrey auction for a product page. The snippets below are

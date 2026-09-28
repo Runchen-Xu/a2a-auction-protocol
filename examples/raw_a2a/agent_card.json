@@ -1,0 +1,23 @@
+{
+  "name": "Example Auction Authority",
+  "supportedInterfaces": [
+    {
+      "url": "https://authority.example/a2a",
+      "protocolBinding": "JSONRPC",
+      "protocolVersion": "1.0"
+    }
+  ],
+  "skills": [
+    {
+      "id": "marketplace.auction.v1",
+      "name": "Auction Authority",
+      "tags": [
+        "protocol:marketplace.auction/v1",
+        "action:get_auction",
+        "action:join_auction",
+        "action:submit_offer",
+        "mechanism:vickrey"
+      ]
+    }
+  ]
+}

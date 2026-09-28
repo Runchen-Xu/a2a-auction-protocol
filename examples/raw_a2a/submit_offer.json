@@ -1,0 +1,12 @@
+{
+  "protocol": "marketplace.auction/v1",
+  "command_id": "33333333-3333-4333-8333-333333333333",
+  "action": "submit_offer",
+  "actor_id": "buyer-1",
+  "payload": {
+    "auction_id": "auction-123",
+    "offer": {"amount": 19000},
+    "expected_version": 4,
+    "source": "automatic"
+  }
+}

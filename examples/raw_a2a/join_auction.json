@@ -1,0 +1,10 @@
+{
+  "protocol": "marketplace.auction/v1",
+  "command_id": "22222222-2222-4222-8222-222222222222",
+  "action": "join_auction",
+  "actor_id": "buyer-1",
+  "payload": {
+    "auction_id": "auction-123",
+    "accepted_mechanism_hash": "sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+  }
+}
