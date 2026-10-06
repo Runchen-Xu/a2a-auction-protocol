@@ -42,6 +42,10 @@ MECHANISM = {
         "id": "acme.score_auction",
         "version": "1",
     },
+    "participant_model": {
+        "initiator": "requester",
+        "offerors": "service providers",
+    },
     "field_visibility": {"*": "sealed_until_close"},
     "directions": ["reverse"],
     "spec_hash": HASH,

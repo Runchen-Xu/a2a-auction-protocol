@@ -1,4 +1,4 @@
-"""Show a Buyer-led reverse procurement auction transcript."""
+"""Show an initiator-led reverse procurement auction transcript."""
 
 from __future__ import annotations
 
@@ -26,17 +26,16 @@ def main() -> None:
         mechanism=MechanismSpec(id="reverse_first_price", version="1"),
     )
     publish = command("create_auction", "buyer-requester", requirement.model_dump(mode="json"))
-    show("1. Buyer -> Authority: reverse create_auction", publish.model_dump(mode="json"))
+    show("1. Initiator -> Authority: reverse create_auction", publish.model_dump(mode="json"))
 
     card = {
         "auction_id": "reverse-auction-123",
-        "buyer_id": "buyer-requester",
-        "seller_id": None,
+        "initiator_id": "buyer-requester",
         "title": requirement.title,
         "description": requirement.description,
         "product_url": requirement.product_url,
         "direction": "reverse",
-        "bidder_role": "seller",
+        "participants": {},
         "status": "OPEN",
         "start_price": 20_000,
         "currency": "USD",
@@ -64,8 +63,10 @@ def main() -> None:
         "4. Authority: reverse settlement",
         {
             "winner_id": "seller-b",
-            "seller_id": "seller-b",
-            "buyer_id": "buyer-requester",
+            "parties": {
+                "requester": "buyer-requester",
+                "winner": "seller-b",
+            },
             "final_price": 13_000,
             "status": "PENDING_SETTLEMENT",
         },

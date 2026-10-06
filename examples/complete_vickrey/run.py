@@ -34,11 +34,11 @@ def main() -> None:
     )
     create = command("create_auction", "seller-1", create_payload.model_dump(mode="json"))
     validate_wire_message(create.model_dump(mode="json"))
-    show("1. Seller -> Authority: create_auction", create.model_dump(mode="json"))
+    show("1. Initiator -> Authority: create_auction", create.model_dump(mode="json"))
 
     auction = {
         "auction_id": "auction-123",
-        "seller_id": "seller-1",
+        "initiator_id": "seller-1",
         "title": create_payload.title,
         "description": create_payload.description,
         "product_url": create_payload.product_url,
@@ -59,18 +59,16 @@ def main() -> None:
         "version": 1,
         "authority_agent_card_url": "https://authority.example/.well-known/agent-card.json",
         "direction": "forward",
-        "creator_id": "seller-1",
-        "buyer_id": None,
-        "bidder_role": "buyer",
+        "participants": {},
     }
-    show("2. Authority -> Broker/Buyers: AuctionCard", auction)
+    show("2. Authority -> Broker/Participants: AuctionCard", auction)
 
     join = command(
         "join_auction",
         "buyer-1",
         {"auction_id": "auction-123", "accepted_mechanism_hash": HASH},
     )
-    show("3. Buyer -> Authority: join_auction", join.model_dump(mode="json"))
+    show("3. Participant -> Authority: join_auction", join.model_dump(mode="json"))
 
     offers = []
     for buyer_id, amount in (("buyer-1", 19_000), ("buyer-2", 17_000)):
@@ -106,8 +104,11 @@ def main() -> None:
     order = {
         "order_id": "order-123",
         "auction_id": "auction-123",
-        "seller_id": "seller-1",
-        "buyer_id": winner,
+        "winner_id": winner,
+        "parties": {
+            "initiator": "seller-1",
+            "winner": winner,
+        },
         "currency": "USD",
         "final_price": second_price,
         "status": "PENDING_SETTLEMENT",

@@ -13,9 +13,9 @@ uv run python examples/reverse_procurement/run.py
 
 ### `complete_vickrey`
 
-A Seller creates a product auction, a Buyer accepts the frozen mechanism, two Buyers submit sealed
-offers, and the Authority returns a second-price order. This is the shortest complete forward
-auction flow.
+An Initiator creates a product auction, a Participant accepts the frozen mechanism, two Participants
+submit sealed offers, and the Authority returns a second-price order. The forward-auction example
+uses seller/buyer labels only as domain context, not as required protocol fields.
 
 ### `custom_multi_attribute`
 
@@ -25,9 +25,9 @@ price, delivery time, and quality, then emits the settlement projection.
 
 ### `reverse_procurement`
 
-A Buyer publishes a procurement requirement and Seller Agents submit supplier offers. The example
-shows how the same protocol envelope supports reverse auctions and multi-attribute supplier
-selection.
+An Initiator publishes a procurement requirement and service providers submit offers. The example
+shows how the same protocol envelope supports reverse auctions and multi-attribute selection without
+changing the command names.
 
 ### `raw_a2a`
 

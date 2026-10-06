@@ -67,6 +67,10 @@
         "settlement": { "type": "object" },
         "formal_spec": { "type": "object" },
         "implementation": { "type": "object" },
+        "participant_model": {
+          "type": "object",
+          "description": "Mechanism-defined participation semantics; buyer/seller roles are not required by the core protocol."
+        },
         "field_visibility": {
           "type": "object",
           "additionalProperties": { "$ref": "#/$defs/visibilityMode" }

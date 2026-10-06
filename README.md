@@ -9,9 +9,9 @@ implementation.
 
 ![A2A auction protocol overview](assets/a2a-auction-protocol-overview.png)
 
-The diagram shows the core flow: a Seller publishes an item, a Broker exposes the auction, Buyers
-read the AuctionCard and submit offers, and the Authority applies the frozen mechanism to produce
-the authoritative order.
+The diagram shows the core flow: an Initiator publishes an item or requirement, a Broker exposes
+the auction, Participants read the AuctionCard and submit offers, and the Authority applies the
+frozen mechanism to produce the authoritative order.
 
 ## Background
 
@@ -27,17 +27,17 @@ auction must support more than a single price field: different authorities may u
 second-price settlement, reverse procurement, multi-attribute scoring, or a new mechanism that was
 not known when the client was written.
 
-`marketplace.auction/v1` provides that shared business layer. It lets independent Seller Agents,
-Buyer Agents, Brokers, and Authorities communicate using a common contract while leaving the
+`marketplace.auction/v1` provides that shared business layer. It lets independent Initiators,
+Participants, Brokers, and Authorities communicate using a common contract while leaving the
 actual mechanism innovation with the Authority.
 
 ## Why It Matters
 
 The protocol is useful for four related reasons:
 
-1. **Interoperability.** A Buyer can recognize an auction capability from an AgentCard and use the
-   same command and result shapes with independent implementations.
-2. **Mechanism transparency.** Buyers can inspect the offer schema, winner rule, settlement rule,
+1. **Interoperability.** A Participant can recognize an auction capability from an AgentCard and
+   use the same command and result shapes with independent implementations.
+2. **Mechanism transparency.** Participants can inspect the offer schema, winner rule, settlement rule,
    visibility policy, and natural-language explanation before joining.
 3. **Authority and safety boundaries.** An LLM Agent may propose an offer, but the Authority owns
    state transitions, concurrency, winner selection, and settlement. A model cannot rewrite the
@@ -61,7 +61,7 @@ This project makes five focused contributions on top of A2A:
    describe English, first-price, Vickrey, Dutch, reverse, multi-attribute, and Authority-defined
    mechanisms through an open mechanism identifier, offer schema, visibility policy, winner rule,
    settlement rule, and tie-breaker.
-3. **Explicit rule understanding and freezing.** Buyers and Sellers can inspect a machine-readable
+3. **Explicit rule understanding and freezing.** Participants can inspect a machine-readable
    `formal_spec`, a human-readable `human_spec`, and an executable implementation identity before
    joining. The selected definition is frozen by `spec_hash`, so a mechanism cannot silently change
    after an auction begins.
@@ -83,7 +83,7 @@ those concerns remain concrete implementation or domain choices.
 ## Application Scenarios
 
 - **Agent commerce:** autonomous buyers compete for products, digital goods, or scarce inventory.
-- **Reverse procurement:** a Buyer publishes a requirement and Seller Agents compete on price,
+- **Reverse procurement:** an Initiator publishes a requirement and provider agents compete on price,
   delivery, quality, or other attributes.
 - **Service marketplaces:** agents bid to perform tasks such as delivery, data collection,
   translation, or software work.
@@ -124,7 +124,10 @@ It defines commands, AuctionCard, offers, mechanism descriptions, capability dec
 idempotency identifiers, visibility policies, and the normative JSON Schema. Discovery may be
 provided by a Broker or another catalog; Broker is not a required protocol role.
 
-The protocol has two participant roles, `seller` and `buyer`. An auction names its authoritative
+The core protocol is role-neutral. Commands identify the sender with `actor_id`; an AuctionCard
+identifies the creator with `initiator_id`; and a mechanism may describe its own participant
+labels in `participant_model`. Terms such as `buyer`, `seller`, `requester`, and `provider` are
+optional domain labels, not mandatory fields in every auction. An auction names its authoritative
 Agent through `authority_agent_card_url`. An Authority may implement built-in or custom mechanism
 IDs; the selected mechanism definition and `spec_hash` are negotiated before joining and frozen
 for the auction.
@@ -143,9 +146,9 @@ uv run python examples/custom_multi_attribute/run.py
 uv run python examples/reverse_procurement/run.py
 ```
 
-The `complete_vickrey` example covers Seller creation, AuctionCard publication, mechanism
+The `complete_vickrey` example covers Initiator creation, AuctionCard publication, mechanism
 acceptance, sealed offers, second-price settlement, and order creation. The custom and reverse
-examples show how the same envelope supports Authority-owned scoring and Buyer-led procurement.
+examples show how the same envelope supports Authority-owned scoring and initiator-led procurement.
 Raw JSON DataPart examples for non-Python clients are in [`examples/raw_a2a`](examples/raw_a2a),
 with a directory guide in [`examples/README.md`](examples/README.md).
 
@@ -192,7 +195,8 @@ Broker catalog; it is not a required business command in this protocol.
 
 ### 2. Create an Auction
 
-The Seller sends a `create_auction` command to the Authority, usually through its Seller Agent:
+The Initiator sends a `create_auction` command to the Authority. In this forward-auction example,
+the initiator happens to be a Seller, but that label is not required by the command envelope:
 
 ```json
 {
@@ -229,12 +233,12 @@ does not replace the Authority's frozen auction state.
 
 ### 3. AuctionCard Returned by the Authority
 
-The Authority responds with an AuctionCard. This is the public state object that Buyers inspect:
+The Authority responds with an AuctionCard. This is the public state object that Participants inspect:
 
 ```json
 {
   "auction_id": "auction-123",
-  "seller_id": "seller-1",
+  "initiator_id": "seller-1",
   "title": "RTX 4090 GPU",
   "description": "Used GPU in working condition.",
   "product_url": "https://shop.example/items/gpu-4090",
@@ -274,6 +278,10 @@ The Authority responds with an AuctionCard. This is the public state object that
       "version": "1",
       "budget_field": "amount"
     },
+    "participant_model": {
+      "initiator": "item_owner",
+      "offerors": "eligible_participants"
+    },
     "field_visibility": {
       "*": "sealed_until_close"
     },
@@ -300,18 +308,16 @@ The Authority responds with an AuctionCard. This is the public state object that
   "version": 1,
   "authority_agent_card_url": "https://authority.example/.well-known/agent-card.json",
   "direction": "forward",
-  "creator_id": "seller-1",
-  "buyer_id": null,
-  "bidder_role": "buyer"
+  "participants": {}
 }
 ```
 
-The `spec_hash` is important: it binds the auction to the exact mechanism definition that Buyers
+The `spec_hash` is important: it binds the auction to the exact mechanism definition that Participants
 accepted. The `version` is the auction state version used for optimistic concurrency control.
 
-### 4. Buyer Accepts the Mechanism and Joins
+### 4. Participant Accepts the Mechanism and Joins
 
-Before joining, the Buyer retrieves the mechanism definition and verifies that it understands the
+Before joining, the Participant retrieves the mechanism definition and verifies that it understands the
 offer schema, visibility policy, winner rule, and settlement rule:
 
 ```json
@@ -327,10 +333,10 @@ offer schema, visibility policy, winner rule, and settlement rule:
 }
 ```
 
-An Authority rejects a missing or mismatched mechanism hash. A Buyer that cannot evaluate the
+An Authority rejects a missing or mismatched mechanism hash. A Participant that cannot evaluate the
 mechanism can decline to join.
 
-### 5. Buyer Submits a Sealed Offer
+### 5. Participant Submits a Sealed Offer
 
 ```json
 {
@@ -408,8 +414,11 @@ The resulting order is:
 {
   "order_id": "order-123",
   "auction_id": "auction-123",
-  "seller_id": "seller-1",
-  "buyer_id": "buyer-1",
+  "winner_id": "buyer-1",
+  "parties": {
+    "initiator": "seller-1",
+    "winner": "buyer-1"
+  },
   "currency": "USD",
   "final_price": 17000,
   "status": "PENDING_SETTLEMENT",
@@ -482,7 +491,7 @@ For example, an Authority can define a multi-attribute procurement mechanism:
 ```
 
 This mechanism is more expressive than a single `amount` field: it can represent multi-attribute,
-reverse, score-based, or Authority-specific auctions. A Buyer can discover it through
+reverse, score-based, or Authority-specific auctions. A Participant can discover it through
 `list_mechanisms` and `get_mechanism`, inspect the offer schema and rules, then echo its
 `spec_hash` in `join_auction`.
 
@@ -497,7 +506,7 @@ implementation   -> Authority-owned executable rule
 ```
 
 Natural language alone is not the final arbiter of a winner or price. If an Authority publishes
-only `human_spec`, a Buyer may understand the proposal but cannot independently execute or verify
+only `human_spec`, a Participant may understand the proposal but cannot independently execute or verify
 the result. For interoperable and auditable execution, the Authority should provide an
 `offer_schema`, `formal_spec`, deterministic `implementation` identity, and a frozen `spec_hash`.
 The Authority remains responsible for validating offers, computing outcomes, and returning a
@@ -529,7 +538,7 @@ validate_wire_message(envelope.model_dump(mode="json"))
 
 This package deliberately does not contain a database, HTTP server, market catalog, payment
 implementation, or auction state machine. It provides the shared wire contract that independent
-auction authorities, Seller Agents, Buyer Agents, and clients can use.
+auction authorities, Initiators, Participants, and clients can use.
 
 It also ships the normative JSON Schema and operation catalog. Use `validate_wire_message()` at
 an integration boundary when a client or service is not implemented in Python:
@@ -556,13 +565,13 @@ envelope = command("submit_offer", "buyer-1", payload.model_dump(mode="json"))
 `image_url` carries a product image. The link is copied into `AuctionCard` and is informational;
 the Authority remains authoritative for the frozen auction state and settlement.
 
-For a full reference implementation with Broker, Authority, Seller, Buyer, SQLite persistence,
+For a full reference implementation with Broker, Authority, Initiator, Participant, SQLite persistence,
 and runnable mechanism samples, see the companion `a2a-auction-marketplace` project.
 
-`AuctionCapability` helps an Agent describe supported roles, mechanisms, and actions in its
-AgentCard. The protocol version is `marketplace.auction/v1`; individual mechanism versions are
+`AuctionCapability` helps an Agent describe supported mechanisms and actions in its AgentCard. The
+protocol version is `marketplace.auction/v1`; individual mechanism versions are
 negotiated through `get_mechanism`; the selected definition and `spec_hash` are frozen into the
-AuctionCard, and Buyers echo that hash when joining. Mechanism IDs are open strings, so an authority can advertise
+AuctionCard, and Participants echo that hash when joining. Mechanism IDs are open strings, so an authority can advertise
 `custom.immediate` or another local mechanism without changing the shared protocol package.
 
 Each definition can carry a `human_spec` for a detailed natural-language explanation, a
@@ -572,8 +581,10 @@ arbiter of winners or prices. `field_visibility` controls which offer and outcom
 published while an auction is open, including `public`, `sealed_until_close`, `seller`, and
 `authority` policies.
 
-The participant roles are `seller` and `buyer`. An auction authority is identified by the
-`authority_agent_card_url` in each `AuctionCard`, then discovered by its supported actions and
-mechanisms rather than a mandatory role name. The authority is the sole source of valid state
-versions and settlement results for that auction. A Broker remains marketplace infrastructure:
+The core protocol does not require `seller` or `buyer` roles. If a domain needs them, the selected
+mechanism may describe those labels in `participant_model`, and the final order may record them in
+its `parties` map. An auction authority is identified by the `authority_agent_card_url` in each
+`AuctionCard`, then discovered by its supported actions and mechanisms rather than a mandatory role
+name. The authority is the sole source of valid state versions and settlement results for that
+auction. A Broker remains marketplace infrastructure:
 it may expose registration and a public catalog through REST without extending this protocol.

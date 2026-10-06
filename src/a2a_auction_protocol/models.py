@@ -10,6 +10,12 @@ from pydantic import BaseModel, Field, field_validator, model_validator
 
 
 class AgentRole(StrEnum):
+    """Legacy economic labels kept for compatibility with early clients.
+
+    New protocol messages should use ``actor_id`` and mechanism-defined
+    participation semantics instead of requiring buyer/seller roles.
+    """
+
     SELLER = "seller"
     BUYER = "buyer"
 
@@ -83,6 +89,14 @@ class MechanismDefinition(BaseModel):
     implementation: dict[str, Any] = Field(
         default_factory=dict,
         description="Authority-owned implementation identity and execution boundary.",
+    )
+    participant_model: dict[str, Any] = Field(
+        default_factory=dict,
+        description=(
+            "Mechanism-defined participation semantics. The core protocol does not require "
+            "buyer/seller roles; a mechanism may describe initiators, offerors, providers, "
+            "requesters, or other domain-specific labels here."
+        ),
     )
     field_visibility: dict[str, VisibilityMode] = Field(
         default_factory=dict,
@@ -242,7 +256,10 @@ class CommandResult(BaseModel):
 
 class AuctionCard(BaseModel):
     auction_id: str
-    seller_id: str | None
+    initiator_id: str | None = Field(
+        default=None,
+        description="Agent that created the auction or procurement request.",
+    )
     title: str
     description: str
     image_url: str | None
@@ -266,24 +283,51 @@ class AuctionCard(BaseModel):
     version: int
     authority_agent_card_url: str
     direction: AuctionDirection = AuctionDirection.FORWARD
-    creator_id: str | None = None
-    buyer_id: str | None = None
-    bidder_role: AgentRole = AgentRole.BUYER
+    participants: dict[str, str] = Field(
+        default_factory=dict,
+        description=(
+            "Optional mechanism-defined participant labels mapped to agent IDs, for example "
+            "{\"requester\": \"agent-1\"}."
+        ),
+    )
+    # Compatibility fields from the pre-role-neutral draft. New producers should omit them.
+    creator_id: str | None = Field(default=None, description="Legacy compatibility field.")
+    seller_id: str | None = Field(default=None, description="Legacy compatibility field.")
+    buyer_id: str | None = Field(default=None, description="Legacy compatibility field.")
+    bidder_role: AgentRole | None = Field(default=None, description="Legacy compatibility field.")
 
 
 class OrderView(BaseModel):
     order_id: str
     auction_id: str
-    seller_id: str
-    buyer_id: str
+    winner_id: str | None = None
+    parties: dict[str, str] = Field(
+        default_factory=dict,
+        description="Mechanism-defined settlement parties mapped to agent IDs.",
+    )
     currency: str
-    final_price: int
+    final_price: int | None = Field(default=None, ge=0)
     status: OrderStatus
     created_at: datetime
     settlement: OutcomeView = Field(default_factory=OutcomeView)
+    # Compatibility fields from the pre-role-neutral draft. New producers should omit them.
+    seller_id: str | None = Field(default=None, description="Legacy compatibility field.")
+    buyer_id: str | None = Field(default=None, description="Legacy compatibility field.")
+
+
+class ParticipantConfig(BaseModel):
+    participant_id: str
+    budget: int = Field(gt=0)
+    strategy: StrategyName
+    authority_url: str
 
 
 class BuyerConfig(BaseModel):
+    """Legacy buyer-specific strategy configuration.
+
+    New generic clients should use :class:`ParticipantConfig`.
+    """
+
     buyer_id: str
     budget: int = Field(gt=0)
     strategy: StrategyName
