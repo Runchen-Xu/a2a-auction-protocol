@@ -195,37 +195,73 @@ Broker catalog; it is not a required business command in this protocol.
 
 ### 2. Create an Auction
 
-The Initiator sends a `create_auction` command to the Authority. In this forward-auction example,
-the initiator happens to be a Seller, but that label is not required by the command envelope:
+The Python package constructs the business command. In this forward-auction example, the initiator
+happens to be a Seller, but the command itself only carries `actor_id`.
 
-```json
-{
-  "protocol": "marketplace.auction/v1",
-  "command_id": "11111111-1111-4111-8111-111111111111",
-  "action": "create_auction",
-  "actor_id": "seller-1",
-  "payload": {
-    "title": "RTX 4090 GPU",
-    "description": "Used GPU in working condition.",
-    "product_url": "https://shop.example/items/gpu-4090",
-    "image_url": "https://shop.example/images/gpu-4090.jpg",
-    "category": "computer-hardware",
-    "currency": "USD",
-    "start_price": 10000,
-    "reserve_price": 12000,
-    "min_increment": 100,
-    "duration_seconds": 30,
-    "anti_sniping_seconds": 5,
-    "max_extensions": 3,
-    "direction": "forward",
-    "mechanism": {
-      "id": "vickrey",
-      "version": "1",
-      "rules": {}
-    }
-  }
-}
+```python
+from a2a_auction_protocol import (
+    CreateAuctionPayload,
+    JoinAuctionPayload,
+    MechanismSpec,
+    SubmitOfferPayload,
+    command,
+    validate_wire_message,
+)
+
+MECHANISM_HASH = "sha256:" + ("0" * 64)
+
+
+def build_vickrey_flow():
+    create_payload = CreateAuctionPayload(
+        title="RTX 4090 GPU",
+        description="Used GPU in working condition.",
+        product_url="https://shop.example/items/gpu-4090",
+        image_url="https://shop.example/images/gpu-4090.jpg",
+        category="computer-hardware",
+        currency="USD",
+        start_price=10_000,
+        reserve_price=12_000,
+        min_increment=100,
+        duration_seconds=30,
+        anti_sniping_seconds=5,
+        max_extensions=3,
+        direction="forward",
+        mechanism=MechanismSpec(id="vickrey", version="1"),
+    )
+    create = command(
+        "create_auction",
+        "agent-initiator",
+        create_payload.model_dump(mode="json"),
+    )
+
+    join = command(
+        "join_auction",
+        "agent-participant-1",
+        JoinAuctionPayload(
+            auction_id="auction-123",
+            accepted_mechanism_hash=MECHANISM_HASH,
+        ).model_dump(mode="json"),
+    )
+
+    offer = command(
+        "submit_offer",
+        "agent-participant-1",
+        SubmitOfferPayload(
+            auction_id="auction-123",
+            offer={"amount": 19_000},
+            expected_version=4,
+            source="manual",
+        ).model_dump(mode="json"),
+    )
+
+    for envelope in (create, join, offer):
+        validate_wire_message(envelope.model_dump(mode="json"))
+
+    return create, join, offer
 ```
+
+The package is transport-neutral: each returned envelope can be serialized with
+`model_dump(mode="json")` and placed in an A2A `DataPart` sent through `message/send`.
 
 The amount is an integer minor unit. In this example, `10000` means `$100.00` if the currency is
 USD. The `product_url` is copied into the AuctionCard and creation event; it is informational and
@@ -233,84 +269,23 @@ does not replace the Authority's frozen auction state.
 
 ### 3. AuctionCard Returned by the Authority
 
-The Authority responds with an AuctionCard. This is the public state object that Participants inspect:
+The Authority returns an `AuctionCard`. A Python client can validate and inspect the returned
+object without reconstructing the JSON manually:
 
-```json
-{
-  "auction_id": "auction-123",
-  "initiator_id": "seller-1",
-  "title": "RTX 4090 GPU",
-  "description": "Used GPU in working condition.",
-  "product_url": "https://shop.example/items/gpu-4090",
-  "image_url": "https://shop.example/images/gpu-4090.jpg",
-  "category": "computer-hardware",
-  "currency": "USD",
-  "mechanism": {
-    "id": "vickrey",
-    "version": "1",
-    "rules": {},
-    "spec_hash": "sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
-  },
-  "mechanism_definition": {
-    "id": "vickrey",
-    "version": "1",
-    "title": "Vickrey second-price auction",
-    "description": "Highest valid offer wins and pays the second-highest price.",
-    "human_spec": "Each buyer submits one private offer before closing. The highest valid offer wins. The winner pays the maximum of the second-highest offer, start price, and reserve price.",
-    "offer_schema": {
-      "type": "object",
-      "properties": {
-        "amount": {"type": "integer", "minimum": 1}
-      },
-      "required": ["amount"],
-      "additionalProperties": false
-    },
-    "rules": {},
-    "settlement": {
-      "winner_rule": "highest_valid_offer",
-      "price_rule": "second_highest_offer_or_reserve_floor",
-      "offer_visibility": "sealed_until_close",
-      "tie_breaker": "earliest_valid_offer"
-    },
-    "implementation": {
-      "type": "authority_plugin",
-      "id": "vickrey",
-      "version": "1",
-      "budget_field": "amount"
-    },
-    "participant_model": {
-      "initiator": "item_owner",
-      "offerors": "eligible_participants"
-    },
-    "field_visibility": {
-      "*": "sealed_until_close"
-    },
-    "directions": ["forward"],
-    "spec_hash": "sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
-  },
-  "start_price": 10000,
-  "reserve_price": 12000,
-  "min_increment": 100,
-  "status": "OPEN",
-  "starts_at": "2026-09-29T10:00:00Z",
-  "ends_at": "2026-09-29T10:00:30Z",
-  "anti_sniping_seconds": 5,
-  "max_extensions": 3,
-  "extension_count": 0,
-  "current_price": 10000,
-  "current_winner_agent_id": null,
-  "current_outcome": {
-    "values": {},
-    "winner_id": null,
-    "clearing_price": 10000,
-    "currency": "USD"
-  },
-  "version": 1,
-  "authority_agent_card_url": "https://authority.example/.well-known/agent-card.json",
-  "direction": "forward",
-  "participants": {}
-}
+```python
+from a2a_auction_protocol import AuctionCard
+
+
+def read_auction_card(command_result: dict) -> AuctionCard:
+    card = AuctionCard.model_validate(command_result["data"]["auction"])
+    print(card.title, card.status, card.version)
+    print(card.mechanism.id, card.mechanism.spec_hash)
+    return card
 ```
+
+The card is a public snapshot: it identifies the initiator, item or requirement, mechanism,
+timing, current state, and Authority endpoint. The selected `participant_model` describes any
+domain-specific labels without making `buyer` or `seller` mandatory.
 
 The `spec_hash` is important: it binds the auction to the exact mechanism definition that Participants
 accepted. The `version` is the auction state version used for optimistic concurrency control.
@@ -320,17 +295,18 @@ accepted. The `version` is the auction state version used for optimistic concurr
 Before joining, the Participant retrieves the mechanism definition and verifies that it understands the
 offer schema, visibility policy, winner rule, and settlement rule:
 
-```json
-{
-  "protocol": "marketplace.auction/v1",
-  "command_id": "22222222-2222-4222-8222-222222222222",
-  "action": "join_auction",
-  "actor_id": "buyer-1",
-  "payload": {
-    "auction_id": "auction-123",
-    "accepted_mechanism_hash": "sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
-  }
-}
+```python
+from a2a_auction_protocol import JoinAuctionPayload, command
+
+
+join = command(
+    "join_auction",
+    "agent-participant-1",
+    JoinAuctionPayload(
+        auction_id=card.auction_id,
+        accepted_mechanism_hash=card.mechanism.spec_hash,
+    ).model_dump(mode="json"),
+)
 ```
 
 An Authority rejects a missing or mismatched mechanism hash. A Participant that cannot evaluate the
@@ -338,41 +314,34 @@ mechanism can decline to join.
 
 ### 5. Participant Submits a Sealed Offer
 
-```json
-{
-  "protocol": "marketplace.auction/v1",
-  "command_id": "33333333-3333-4333-8333-333333333333",
-  "action": "submit_offer",
-  "actor_id": "buyer-1",
-  "payload": {
-    "auction_id": "auction-123",
-    "offer": {"amount": 19000},
-    "expected_version": 4,
-    "source": "automatic"
-  }
-}
+```python
+from a2a_auction_protocol import SubmitOfferPayload, command, validate_wire_message
+
+
+offer = command(
+    "submit_offer",
+    "agent-participant-1",
+    SubmitOfferPayload(
+        auction_id=card.auction_id,
+        offer={"amount": 19_000},
+        expected_version=card.version,
+        source="manual",
+    ).model_dump(mode="json"),
+)
+validate_wire_message(offer.model_dump(mode="json"))
 ```
 
-The Authority validates the command atomically. A successful response contains a structured
-`CommandResult` artifact:
+The client serializes the command and sends it in an A2A `DataPart`. Assume `authority_client` is
+the application's A2A JSON-RPC adapter; the package itself intentionally does not choose an HTTP
+client or server framework. The Authority validates the command atomically and returns a
+structured `CommandResult`:
 
-```json
-{
-  "protocol": "marketplace.auction/v1",
-  "command_id": "33333333-3333-4333-8333-333333333333",
-  "status": "accepted",
-  "data": {
-    "auction_id": "auction-123",
-    "accepted": true,
-    "auction_version": 5
-  },
-  "error": null,
-  "a2a": {
-    "message_id": "a2a-message-123",
-    "context_id": "a2a-context-123",
-    "task_id": "a2a-task-123"
-  }
-}
+```python
+result = authority_client.send_data_part(offer.model_dump(mode="json"))
+if result.status == "accepted":
+    print(result.data["auction_version"])
+else:
+    print(result.error.code, result.error.message)
 ```
 
 The bid amount remains redacted while the Vickrey auction is open. Public events can expose that
@@ -380,58 +349,34 @@ a bid was accepted without exposing the sealed amount.
 
 ### 6. Final Settlement
 
-Suppose the offers are:
+When the Authority closes the auction, the client reads the authoritative result rather than
+computing the winner locally:
 
-```text
-buyer-1: 19000
-buyer-2: 17000
+```python
+from a2a_auction_protocol import AuctionCard, OrderView
+
+
+# final_result is the CommandResult returned by the Authority after closing.
+final_card = AuctionCard.model_validate(final_result.data["auction"])
+order = OrderView.model_validate(final_result.data["order"])
+
+print(final_card.status)                 # SOLD
+print(final_card.current_winner_agent_id)
+print(order.winner_id)
+print(order.final_price)                  # second-highest offer
+print(order.parties)                     # mechanism-defined party labels
 ```
 
-When the Authority closes the auction, the final AuctionCard contains:
+For the example offers `19_000` and `17_000`, a Vickrey Authority returns the participant with
+the `19_000` offer as the winner and a clearing price of `17_000`. The order remains
+`PENDING_SETTLEMENT` because this protocol does not implement payment, delivery, or refunds.
 
-```json
-{
-  "auction_id": "auction-123",
-  "status": "SOLD",
-  "current_price": 17000,
-  "current_winner_agent_id": "buyer-1",
-  "current_outcome": {
-    "values": {
-      "second_highest_offer": {"amount": 17000},
-      "winning_offer": {"amount": 19000}
-    },
-    "winner_id": "buyer-1",
-    "clearing_price": 17000,
-    "currency": "USD"
-  },
-  "version": 7
-}
+The complete transport-neutral transcript is available at
+[`examples/complete_vickrey/run.py`](examples/complete_vickrey/run.py) and can be run with:
+
+```bash
+uv run python examples/complete_vickrey/run.py
 ```
-
-The resulting order is:
-
-```json
-{
-  "order_id": "order-123",
-  "auction_id": "auction-123",
-  "winner_id": "buyer-1",
-  "parties": {
-    "initiator": "seller-1",
-    "winner": "buyer-1"
-  },
-  "currency": "USD",
-  "final_price": 17000,
-  "status": "PENDING_SETTLEMENT",
-  "settlement": {
-    "winner_id": "buyer-1",
-    "clearing_price": 17000,
-    "currency": "USD"
-  }
-}
-```
-
-The order is pending settlement because this protocol does not implement payment, delivery, or
-refunds.
 
 ## Custom and Natural-Language Mechanisms
 
