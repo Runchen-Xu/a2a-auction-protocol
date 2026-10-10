@@ -136,15 +136,20 @@ the compatibility spelling for a sealed offer, and `observe_auction` is an alias
 `get_auction`; reference services may continue to accept both aliases without advertising them
 as canonical operations. `place_bid` is retained only for older clients.
 
-For one-shot mechanisms, clients can use `submit_offer`. For dynamic mechanisms, clients should
-read `mechanism_definition.action_schema` from the AuctionCard and use the generic `submit_action`
-operation. The reference marketplace currently exposes these action mappings:
+All mechanism actions use the same canonical `submit_action` operation. The mechanism-specific
+names below are values of `payload.action_type`, not additional protocol-level operations. For
+older clients, `submit_offer` remains a compatibility spelling for a sealed offer. Clients should
+read `mechanism_definition.action_schema` from the AuctionCard before submitting an action.
 
-| Mechanism | Actions | Meaning |
+| Mechanism | Allowed `action_type` values | Meaning |
 | --- | --- | --- |
 | `first_price_sealed` / `vickrey` | `submit_offer`, `exit` | Submit one sealed offer or abstain by exiting |
 | `english` | `raise_bid`, `exit` | Raise the public price or leave the auction |
 | `dutch` | `accept_current_price`, `exit` | Accept the Authority's current clock price or leave |
+
+For example, both `raise_bid` and `exit` are carried through the same operation:
+`action = "submit_action"`, with the mechanism-specific value placed in
+`payload.action_type`.
 
 Example action carried as an A2A JSON `DataPart`:
 
