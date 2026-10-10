@@ -1,7 +1,8 @@
 """The normative operation catalog for marketplace.auction/v1.
 
 The catalog is intentionally small and transport-neutral. A2A JSON-RPC carries the
-messages, while these definitions describe the business operation contract.
+messages, while these definitions describe the business operation contract. Compatibility
+aliases remain accepted by reference services but are not part of the canonical catalog.
 """
 
 from __future__ import annotations
@@ -42,9 +43,9 @@ OPERATION_CATALOG: tuple[dict[str, Any], ...] = (
         "async": False,
     },
     {
-        "action": "submit_offer",
-        "request_schema": "#/definitions/submitOfferPayload",
-        "result_schema": "#/definitions/offerResult",
+        "action": "submit_action",
+        "request_schema": "#/definitions/submitActionPayload",
+        "result_schema": "#/definitions/actionResult",
         "idempotent": True,
         "mutates_state": True,
         "async": False,
@@ -65,6 +66,9 @@ OPERATION_CATALOG: tuple[dict[str, Any], ...] = (
         "mutates_state": False,
         "async": False,
     },
+)
+
+NOTIFICATION_CATALOG: tuple[dict[str, Any], ...] = (
     {
         "action": "market_update",
         "request_schema": "#/definitions/marketUpdatePayload",
@@ -75,6 +79,20 @@ OPERATION_CATALOG: tuple[dict[str, Any], ...] = (
     },
 )
 
+COMPATIBILITY_ACTIONS: tuple[str, ...] = (
+    "submit_offer",
+    "observe_auction",
+    "place_bid",
+)
+
 
 def operation_catalog() -> list[dict[str, Any]]:
     return [dict(item) for item in OPERATION_CATALOG]
+
+
+def notification_catalog() -> list[dict[str, Any]]:
+    return [dict(item) for item in NOTIFICATION_CATALOG]
+
+
+def compatibility_actions() -> list[str]:
+    return list(COMPATIBILITY_ACTIONS)

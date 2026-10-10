@@ -8,9 +8,13 @@ from a2a_auction_protocol import (
     CreateAuctionPayload,
     MechanismId,
     PROTOCOL,
+    SubmitActionPayload,
     command,
     command_fingerprint,
+    compatibility_actions,
     load_schema,
+    notification_catalog,
+    operation_catalog,
     validate_wire_message,
 )
 
@@ -104,3 +108,24 @@ def test_product_url_is_an_absolute_http_url():
 
     with pytest.raises(ValueError, match="absolute http or https URL"):
         CreateAuctionPayload(title="invalid", start_price=1000, product_url="items/123")
+
+
+def test_canonical_operations_separate_notifications_and_compatibility_aliases():
+    assert [item["action"] for item in operation_catalog()] == [
+        "list_mechanisms",
+        "get_mechanism",
+        "create_auction",
+        "join_auction",
+        "submit_action",
+        "cancel_auction",
+        "get_auction",
+    ]
+    assert [item["action"] for item in notification_catalog()] == ["market_update"]
+    assert compatibility_actions() == ["submit_offer", "observe_auction", "place_bid"]
+
+    payload = SubmitActionPayload(
+        auction_id="auction-1",
+        action_type="submit_offer",
+        action_data={"amount": 15000},
+    )
+    assert payload.action_data == {"amount": 15000}

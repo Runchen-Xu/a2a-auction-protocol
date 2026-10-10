@@ -80,6 +80,13 @@ class MechanismDefinition(BaseModel):
         description="Full natural-language explanation for human and LLM consumers.",
     )
     offer_schema: dict[str, Any]
+    action_schema: dict[str, Any] = Field(
+        default_factory=dict,
+        description=(
+            "Machine-readable schema for mechanism actions such as submitting an offer, "
+            "accepting a clock price, or exiting."
+        ),
+    )
     rules: dict[str, Any] = Field(default_factory=dict)
     settlement: dict[str, Any]
     formal_spec: dict[str, Any] = Field(
@@ -187,6 +194,16 @@ class JoinAuctionPayload(BaseModel):
 class SubmitOfferPayload(BaseModel):
     auction_id: str
     offer: dict[str, Any] = Field(min_length=1)
+    expected_version: int | None = Field(default=None, ge=0)
+    source: Literal["automatic", "manual"] = "manual"
+
+
+class SubmitActionPayload(BaseModel):
+    """Mechanism-neutral action envelope for dynamic and sealed auctions."""
+
+    auction_id: str
+    action_type: str = Field(min_length=1, max_length=80)
+    action_data: dict[str, Any] = Field(default_factory=dict)
     expected_version: int | None = Field(default=None, ge=0)
     source: Literal["automatic", "manual"] = "manual"
 

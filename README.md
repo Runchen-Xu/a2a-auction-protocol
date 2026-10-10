@@ -124,6 +124,51 @@ It defines commands, AuctionCard, offers, mechanism descriptions, capability dec
 idempotency identifiers, visibility policies, and the normative JSON Schema. Discovery may be
 provided by a Broker or another catalog; Broker is not a required protocol role.
 
+The canonical operation surface is intentionally small:
+
+```text
+list_mechanisms  get_mechanism  create_auction  join_auction
+submit_action    cancel_auction  get_auction
+```
+
+`market_update` is an asynchronous notification, not a participant request. `submit_offer` is
+the compatibility spelling for a sealed offer, and `observe_auction` is an alias for
+`get_auction`; reference services may continue to accept both aliases without advertising them
+as canonical operations. `place_bid` is retained only for older clients.
+
+For one-shot mechanisms, clients can use `submit_offer`. For dynamic mechanisms, clients should
+read `mechanism_definition.action_schema` from the AuctionCard and use the generic `submit_action`
+operation. The reference marketplace currently exposes these action mappings:
+
+| Mechanism | Actions | Meaning |
+| --- | --- | --- |
+| `first_price_sealed` / `vickrey` | `submit_offer`, `exit` | Submit one sealed offer or abstain by exiting |
+| `english` | `raise_bid`, `exit` | Raise the public price or leave the auction |
+| `dutch` | `accept_current_price`, `exit` | Accept the Authority's current clock price or leave |
+
+Example action carried as an A2A JSON `DataPart`:
+
+```json
+{
+  "protocol": "marketplace.auction/v1",
+  "command_id": "uuid",
+  "action": "submit_action",
+  "actor_id": "participant-1",
+  "payload": {
+    "auction_id": "auction-001",
+    "action_type": "accept_current_price",
+    "action_data": {"observed_price": 1500},
+    "expected_version": 8,
+    "source": "manual"
+  }
+}
+```
+
+The Authority recomputes the current clock price and applies the action atomically. Action
+schemas, visibility, settlement rules, and implementation identity are included in the frozen
+mechanism definition and covered by its `spec_hash`. `submit_offer` remains supported for
+backward compatibility.
+
 The core protocol is role-neutral. Commands identify the sender with `actor_id`; an AuctionCard
 identifies the creator with `initiator_id`; and a mechanism may describe its own participant
 labels in `participant_model`. Terms such as `buyer`, `seller`, `requester`, and `provider` are

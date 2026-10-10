@@ -1,6 +1,6 @@
 [project]
 name = "a2a-auction-protocol"
-version = "0.2.0"
+version = "0.3.0"
 description = "Reusable A2A marketplace auction protocol models and capability declarations."
 readme = "README.md"
 requires-python = ">=3.13,<3.14"

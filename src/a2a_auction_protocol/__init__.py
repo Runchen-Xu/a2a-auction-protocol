@@ -26,6 +26,7 @@ from a2a_auction_protocol.models import (
     ParticipantConfig,
     PlaceBidPayload,
     SubmitOfferPayload,
+    SubmitActionPayload,
     StrategyName,
     OutcomeView,
     VisibilityMode,
@@ -42,7 +43,11 @@ from a2a_auction_protocol.protocol import (
     command_fingerprint,
     rejected,
 )
-from a2a_auction_protocol.operations import operation_catalog
+from a2a_auction_protocol.operations import (
+    compatibility_actions,
+    notification_catalog,
+    operation_catalog,
+)
 from a2a_auction_protocol.schemas import load_schema, validate_wire_message
 
 __all__ = [
@@ -77,6 +82,7 @@ __all__ = [
     "PROTOCOL_NAMESPACE",
     "PROTOCOL_VERSION",
     "SubmitOfferPayload",
+    "SubmitActionPayload",
     "StrategyName",
     "OutcomeView",
     "VisibilityMode",
@@ -85,6 +91,8 @@ __all__ = [
     "command_fingerprint",
     "load_schema",
     "operation_catalog",
+    "notification_catalog",
+    "compatibility_actions",
     "validate_wire_message",
     "rejected",
 ]

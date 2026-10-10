@@ -63,6 +63,7 @@
         "description": { "type": "string" },
         "human_spec": { "type": "string" },
         "offer_schema": { "type": "object" },
+        "action_schema": { "type": "object" },
         "rules": { "type": "object" },
         "settlement": { "type": "object" },
         "formal_spec": { "type": "object" },
@@ -80,6 +81,18 @@
           "items": { "enum": ["forward", "reverse"] }
         },
         "spec_hash": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" }
+      }
+    },
+    "submitActionPayload": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["auction_id", "action_type", "action_data"],
+      "properties": {
+        "auction_id": { "type": "string", "minLength": 1 },
+        "action_type": { "type": "string", "minLength": 1, "maxLength": 80 },
+        "action_data": { "type": "object" },
+        "expected_version": { "type": ["integer", "null"], "minimum": 0 },
+        "source": { "enum": ["automatic", "manual"] }
       }
     },
     "result": {
